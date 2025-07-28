@@ -3,11 +3,12 @@ const disconnectBtn = document.getElementById('disconnect-btn');
 const connectionStatus = document.getElementById('connection-status');
 const agentContainer = document.getElementById('agent-container');
 
+
 // Ensure this URL is correct for your LiveKit project
 const wsURL = 'wss://learn-h4ad9frz.livekit.cloud'; 
 
 // This is the address of your local Python token server
-const tokenServerURL = 'http://localhost:5000'; 
+const tokenServerURL = 'http://127.0.0.1:5000'; 
 
 let room;
 
@@ -23,7 +24,7 @@ async function getToken(roomName, identity) {
 
 connectBtn.addEventListener('click', async () => {
     console.log('Connect button clicked. Starting connection process...');
-    room = new livekit.Room(); 
+    const room = new LivekitClient.Room();
 
     connectionStatus.textContent = 'Connecting...';
     connectBtn.disabled = true;
@@ -47,7 +48,7 @@ connectBtn.addEventListener('click', async () => {
         await room.localParticipant.setMicrophoneEnabled(true);
         console.log('Microphone is on.');
 
-        room.on(livekit.RoomEvent.TrackSubscribed, (track) => {
+        room.on(LivekitClient.RoomEvent.TrackSubscribed, (track) => {
             if (track.kind === 'audio') {
                 console.log('Agent audio track subscribed. Attaching...');
                 const audioElement = track.attach();
