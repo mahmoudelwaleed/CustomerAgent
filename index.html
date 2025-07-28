@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gadget World Support</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Gadget World Customer Support</h1>
+    <p>Talk to Aura, your friendly AI support agent.</p>
+    
+    <div id="connection-controls">
+        <button id="connect-btn">Connect</button>
+        <button id="disconnect-btn" disabled>Disconnect</button>
+    </div>
+
+    <div id="status">
+        <p>Status: <span id="connection-status">Disconnected</span></p>
+    </div>
+
+    <div id="agent-container"></div>
+
+    <!-- 
+      THE FIX: We are now loading a specific, stable version (2.0.5) of the library.
+    -->
+    <script src="https://cdn.jsdelivr.net/npm/livekit-client@2.0.5/dist/livekit-client.umd.js"></script>
+    
+    <!-- This loads your full app script, which can now find the 'livekit' object -->
+    <script src="app.js"></script>
+
+</body>
+</html>
