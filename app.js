@@ -1,17 +1,19 @@
+// A simplified, audio-only client for debugging.
+// Replace your entire app.js with this code.
+
 const connectBtn = document.getElementById('connect-btn');
 const disconnectBtn = document.getElementById('disconnect-btn');
 const connectionStatus = document.getElementById('connection-status');
 const agentContainer = document.getElementById('agent-container');
 
-
-// Ensure this URL is correct for your LiveKit project
-const wsURL = 'wss://learn-h4ad9frz.livekit.cloud'; 
-
-// This is the address of your local Python token server
-const tokenServerURL = 'http://127.0.0.1:5000'; 
+// --- Your project details ---
+const wsURL = 'wss://learn-h4ad9frz.livekit.cloud';
+const tokenServerURL = 'http://127.0.0.1:5000';
+// --------------------------
 
 let room;
 
+// Function to get a token from your server
 async function getToken(roomName, identity) {
     const response = await fetch(`${tokenServerURL}/get-token?room=${roomName}&identity=${identity}`);
     if (!response.ok) {
@@ -22,35 +24,47 @@ async function getToken(roomName, identity) {
     return data.token;
 }
 
+// --- Main Connection Logic ---
 connectBtn.addEventListener('click', async () => {
-    console.log('Connect button clicked. Starting connection process...');
-    const room = new LivekitClient.Room();
+    console.log('Connect button clicked. Starting audio-only connection...');
+    
+    // Initialize a new Room object for a clean connection
+    room = new LivekitClient.Room();
 
     connectionStatus.textContent = 'Connecting...';
     connectBtn.disabled = true;
+    disconnectBtn.disabled = true;
 
     try {
         const roomName = 'my-agent-room';
         const identity = `user_${Math.floor(Math.random() * 1000)}`;
 
-        console.log('Requesting token from server...');
-        connectionStatus.textContent = 'Requesting token...';
+        console.log(`[1/5] Requesting token for room '${roomName}'`);
         const token = await getToken(roomName, identity);
-        console.log('Token received.');
+        console.log('[2/5] Token received.');
 
-        console.log('Connecting to LiveKit room...');
-        connectionStatus.textContent = 'Connecting to room...';
+        console.log('[3/5] Connecting to LiveKit room...');
         await room.connect(wsURL, token);
-        console.log('Successfully connected to room:', room.name);
+        console.log('[4/5] Successfully connected to room.');
 
-        connectionStatus.textContent = 'Connected';
+        // This is the most critical part. We ONLY create and publish AUDIO.
+        console.log('[5/5] Creating and publishing MICROPHONE track...');
+        connectionStatus.textContent = 'Starting microphone...';
+        
+        // Explicitly create an AUDIO track.
+        const audioTrack = await LivekitClient.createLocalAudioTrack();
+        
+        // Explicitly publish that AUDIO track.
+        await room.localParticipant.publishTrack(audioTrack);
+        
+        console.log('SUCCESS: Microphone audio track has been published.');
+        connectionStatus.textContent = 'Connected & Microphone On';
         disconnectBtn.disabled = false;
-        await room.localParticipant.setMicrophoneEnabled(true);
-        console.log('Microphone is on.');
 
-        room.on(LivekitClient.RoomEvent.TrackSubscribed, (track) => {
+        // Listener to hear the agent's response
+        room.on(LivekitClient.RoomEvent.TrackSubscribed, (track, publication, participant) => {
             if (track.kind === 'audio') {
-                console.log('Agent audio track subscribed. Attaching...');
+                console.log(`Agent audio track subscribed from participant: ${participant.identity}`);
                 const audioElement = track.attach();
                 agentContainer.appendChild(audioElement);
             }
@@ -59,10 +73,11 @@ connectBtn.addEventListener('click', async () => {
     } catch (error) {
         console.error('Connection process failed:', error);
         connectionStatus.textContent = `Error: ${error.message}`;
-        connectBtn.disabled = false;
+        connectBtn.disabled = false; // Allow retrying on failure
     }
 });
 
+// --- Disconnect Logic ---
 disconnectBtn.addEventListener('click', async () => {
     if (room) {
         await room.disconnect();
@@ -74,4 +89,4 @@ disconnectBtn.addEventListener('click', async () => {
     }
 });
 
-console.log('app.js has been loaded and event listeners are set.');
+console.log('Audio-only app.js has been loaded.');
