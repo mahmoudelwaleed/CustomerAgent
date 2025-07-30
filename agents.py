@@ -1,21 +1,10 @@
 import asyncio
 import os
 from dotenv import load_dotenv
-from typing import TypedDict
+from livekit import agents
+from livekit.plugins import deepgram, openai, silero
+import os
 
-# Import LiveKit components
-from livekit import rtc
-from livekit.agents import JobContext, AgentSession, WorkerOptions, cli, WorkerType
-from livekit.plugins import deepgram, langchain
-
-# Import LangChain and LangGraph components
-from langchain_openai import AzureChatOpenAI
-from langchain.prompts import ChatPromptTemplate
-from langchain.schema.runnable import Runnable
-from langchain.schema.output_parser import StrOutputParser
-from langgraph.graph import StateGraph, END
-
-# Load environment variables from .env file
 load_dotenv()
 
 # --- 1. DEFINE YOUR LANGGRAPH AGENT BRAIN (This remains the same) ---
@@ -72,40 +61,36 @@ async def entrypoint(ctx: JobContext):
 
     # Connect to the room first
     await ctx.connect()
-    print("--- AGENT CONNECTED TO ROOM, WAITING FOR USER AUDIO ---")
+  
+    my_azure_api_key = os.environ.get("AZURE_OPENAI_API_KEY")
+    my_azure_endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")
+    my_azure_deployment_name = "gpt-4o-mini" 
 
-    # Wait until the audio track is ready
-    try:
-        await asyncio.wait_for(audio_track_ready.wait(), timeout=20.0)
-    except asyncio.TimeoutError:
-        print("--- NO AUDIO TRACK RECEIVED, TIMING OUT ---")
-        return
-
-    # Initialize the agent session
-    langgraph_workflow = create_langgraph_workflow()
-    
-    session = AgentSession(
-        stt=deepgram.STT(api_key=os.environ["DEEPGRAM_API_KEY"]),
-        llm=langchain.LLMAdapter(graph=langgraph_workflow),
+    session = agents.AgentSession(
+        # vad=silero.VAD(), 
+        stt=deepgram.STT(
+            model="nova-2-general",
+        ),
         tts=deepgram.TTS(
             api_key=os.environ["DEEPGRAM_API_KEY"],
             model="aura-asteria-en",
         ),
+        llm=openai.LLM.with_azure(
+            azure_deployment=my_azure_deployment_name,
+            api_key=my_azure_api_key,
+            azure_endpoint=my_azure_endpoint,
+        )
     )
 
-    # Add debug listeners
-    @session.on("stt_final_transcript")
-    def on_stt_final_transcript(transcript: str):
-        print(f"STT Final: '{transcript}'")
+    await session.start(
+        room=ctx.room,
+        agent=agents.Agent(instructions="You are a helpful voice AI assistant.")
+    )
 
-    @session.on("llm_response")
-    def on_llm_response(text: str):
-        print(f"LLM Response: '{text}'")
-    
-    # Run the session with the user's audio track
-    await session.run(user_input=user_audio_track)
+    await session.generate_reply(
+        instructions="Greet the user and offer your assistance."
+    )
 
-# --- 3. THE MAIN EXECUTION BLOCK (This remains the same) ---
 if __name__ == "__main__":
     opts = WorkerOptions(
         entrypoint_fnc=entrypoint,
