@@ -2,7 +2,6 @@ from dotenv import load_dotenv
 from livekit import agents
 from livekit.plugins import deepgram, openai, silero
 import os
-
 load_dotenv()
 
 async def entrypoint(ctx: agents.JobContext):
@@ -11,8 +10,8 @@ async def entrypoint(ctx: agents.JobContext):
     It's called when a new job is created.
     """
     await ctx.connect()
-  
-    my_azure_api_key = os.environ.get("AZURE_OPENAI_API_KEY")
+
+    my_azure_api_key =  os.environ.get("AZURE_OPENAI_API_KEY")
     my_azure_endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")
     my_azure_deployment_name = "gpt-4o-mini" 
 
